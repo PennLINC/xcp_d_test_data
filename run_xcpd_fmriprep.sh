@@ -11,13 +11,12 @@ docker run --rm -u $(id -u) \
     -w /bids-input/work \
     --participant_label 1648798153 \
     --dummy-scans auto \
-    --head_radius auto \
+    --head-radius auto \
     --warp-surfaces-native2std \
     --cifti \
     --motion-filter-type notch \
     --band-stop-min 12 \
     --band-stop-max 18 \
-    --mem_gb 4 \
+    --mem-gb 4 \
     --nthreads 1 \
-    --resource_monitor \
     -v
