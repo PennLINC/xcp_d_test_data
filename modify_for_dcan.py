@@ -133,8 +133,12 @@ def main(fmri_dir, out_dir, work_dir):
         wf.base_dir = work_dir
         wf_res = wf.run()
         wf_nodes = get_nodes(wf_res)
-        lh_surf_fslr = wf_nodes[f"{name}.outputnode"].get_output("lh_wm_surf")
-        rh_surf_fslr = wf_nodes[f"{name}.outputnode"].get_output("rh_wm_surf")
+        lh_surf_fslr = wf_nodes[f"{name}.split_up_surfaces_fsLR_32k_lh"].get_output(
+            "out2"
+        )
+        rh_surf_fslr = wf_nodes[f"{name}.split_up_surfaces_fsLR_32k_rh"].get_output(
+            "out2"
+        )
 
         lh_surf_out = os.path.join(
             surf_dir,
