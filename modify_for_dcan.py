@@ -1,11 +1,10 @@
 """Prepare fMRIPrep data for DCAN conversion.
 
-- Run morphometry and mesh surface files through anatomical workflow to get fsLR-32k GIFTIs.
+- Run mesh surface files through anatomical workflow to get fsLR-32k GIFTIs.
 - Warp aparcaseg in native space to MNI152NLin6Asym-2mm space/resolution.
 - Warp ribbon in native space to MNI152NLin6Asym-2mm space/resolution.
 """
 import os
-import shutil
 
 from templateflow.api import get as get_template
 from xcp_d.interfaces.ants import ApplyTransforms
@@ -36,8 +35,7 @@ def main(fmri_dir, out_dir, work_dir):
     )
     aparcaseg_out = os.path.join(out_anat_dir, "aparc+aseg.nii.gz")
     ribbon = os.path.join(
-        anat_dir,
-        f"{subject_id}_ses-PNC1_acq-refaced_desc-ribbon_mask.nii.gz",
+        anat_dir, f"{subject_id}_ses-PNC1_acq-refaced_desc-ribbon_mask.nii.gz"
     )
     ribbon_out = os.path.join(out_anat_dir, "ribbon.nii.gz")
     anat_to_template_xfm = os.path.join(
@@ -83,96 +81,48 @@ def main(fmri_dir, out_dir, work_dir):
 
     # Step 2. Warp surfaces from fsnative to fsLR-32k.
     lh_pial_surf = os.path.join(
-        anat_dir,
-        f"{subject_id}_ses-PNC1_acq-refaced_hemi-L_pial.surf.gii",
+        anat_dir, f"{subject_id}_ses-PNC1_acq-refaced_hemi-L_pial.surf.gii"
     )
     rh_pial_surf = os.path.join(
-        anat_dir,
-        f"{subject_id}_ses-PNC1_acq-refaced_hemi-R_pial.surf.gii",
+        anat_dir, f"{subject_id}_ses-PNC1_acq-refaced_hemi-R_pial.surf.gii"
     )
-    extensions = {
-        "pial": ".surf.gii",
-        "white": ".surf.gii",
-        "thickness": ".shape.gii",
-        "curv": ".shape.gii",
-        "sulc": ".shape.gii",
-    }
-    out_surfaces = {
-        "pial": "pial",
-        "white": "white",
-        "thickness": "thickness",
-        "curv": "curvature",
-        "sulc": "sulc",
-    }
-    for surface in extensions.keys():
-        name = f"warp_{surface}_to_template_wf"
-        wf = init_warp_surfaces_to_template_wf(
-            fmri_dir=fmri_dir,
-            subject_id=subject_id,
-            output_dir=work_dir,
-            omp_nthreads=1,
-            mem_gb=4,
-            name=name,
-        )
+    lh_wm_surf = os.path.join(
+        anat_dir, f"{subject_id}_ses-PNC1_acq-refaced_hemi-L_white.surf.gii"
+    )
+    rh_wm_surf = os.path.join(
+        anat_dir, f"{subject_id}_ses-PNC1_acq-refaced_hemi-R_white.surf.gii"
+    )
+    wf = init_warp_surfaces_to_template_wf(
+        fmri_dir=fmri_dir,
+        subject_id=subject_id,
+        output_dir=work_dir,
+        omp_nthreads=1,
+        mem_gb=4,
+        name="warp",
+    )
 
-        lh_surf = os.path.join(
-            anat_dir,
-            f"{subject_id}_ses-PNC1_acq-refaced_hemi-L_{surface}{extensions[surface]}",
-        )
-        rh_surf = os.path.join(
-            anat_dir,
-            f"{subject_id}_ses-PNC1_acq-refaced_hemi-R_{surface}{extensions[surface]}",
-        )
+    wf.inputs.inputnode.anat_to_template_xfm = anat_to_template_xfm
+    wf.inputs.inputnode.template_to_anat_xfm = template_to_anat_xfm
+    wf.inputs.inputnode.lh_pial_surf = lh_pial_surf
+    wf.inputs.inputnode.rh_pial_surf = rh_pial_surf
+    wf.inputs.inputnode.lh_wm_surf = lh_wm_surf
+    wf.inputs.inputnode.rh_wm_surf = rh_wm_surf
+    wf.base_dir = work_dir
+    wf_res = wf.run()
+    wf_nodes = get_nodes(wf_res)
+    lh_wm_fslr = wf_nodes["warp.split_up_surfaces_fsLR_32k_lh"].get_output("out2")
+    rh_wm_fslr = wf_nodes["warp.split_up_surfaces_fsLR_32k_rh"].get_output("out2")
+    lh_wm_out = os.path.join(surf_dir, f"{subject}.L.white.32k_fs_LR.surf.gii")
+    rh_wm_out = os.path.join(surf_dir, f"{subject}.R.white.32k_fs_LR.surf.gii")
+    os.rename(lh_wm_fslr, lh_wm_out)
+    os.rename(rh_wm_fslr, rh_wm_out)
 
-        wf.inputs.inputnode.anat_to_template_xfm = anat_to_template_xfm
-        wf.inputs.inputnode.template_to_anat_xfm = template_to_anat_xfm
-        wf.inputs.inputnode.lh_pial_surf = lh_pial_surf
-        wf.inputs.inputnode.rh_pial_surf = rh_pial_surf
-        wf.inputs.inputnode.lh_wm_surf = lh_surf
-        wf.inputs.inputnode.rh_wm_surf = rh_surf
-        wf.base_dir = work_dir
-        wf_res = wf.run()
-        wf_nodes = get_nodes(wf_res)
-        lh_surf_fslr = wf_nodes[f"{name}.split_up_surfaces_fsLR_32k_lh"].get_output(
-            "out2"
-        )
-        rh_surf_fslr = wf_nodes[f"{name}.split_up_surfaces_fsLR_32k_rh"].get_output(
-            "out2"
-        )
-
-        lh_surf_out = os.path.join(
-            surf_dir,
-            f"{subject}.L.{out_surfaces[surface]}.32k_fs_LR{extensions[surface]}",
-        )
-        rh_surf_out = os.path.join(
-            surf_dir,
-            f"{subject}.R.{out_surfaces[surface]}.32k_fs_LR{extensions[surface]}",
-        )
-        os.rename(lh_surf_fslr, lh_surf_out)
-        os.rename(rh_surf_fslr, rh_surf_out)
-        if surface == "thickness":
-            # Mock up the corrected thickness, myelin, and smoothed myelin
-            # The myelin maps might not work correctly since they're shape.giis
-            lh_smm = os.path.join(
-                surf_dir, f"{subject}.L.SmoothedMyelinMap.32k_fs_LR.func.gii"
-            )
-            rh_smm = os.path.join(
-                surf_dir, f"{subject}.R.SmoothedMyelinMap.32k_fs_LR.func.gii"
-            )
-            lh_mm = os.path.join(surf_dir, f"{subject}.L.MyelinMap.32k_fs_LR.func.gii")
-            rh_mm = os.path.join(surf_dir, f"{subject}.R.MyelinMap.32k_fs_LR.func.gii")
-            lh_ct = os.path.join(
-                surf_dir, f"{subject}.L.corrThickness.32k_fs_LR.shape.gii"
-            )
-            rh_ct = os.path.join(
-                surf_dir, f"{subject}.R.corrThickness.32k_fs_LR.shape.gii"
-            )
-            shutil.copyfile(lh_surf_out, lh_smm)
-            shutil.copyfile(lh_surf_out, lh_mm)
-            shutil.copyfile(lh_surf_out, lh_ct)
-            shutil.copyfile(rh_surf_out, rh_smm)
-            shutil.copyfile(rh_surf_out, rh_mm)
-            shutil.copyfile(rh_surf_out, rh_ct)
+    lh_pial_fslr = wf_nodes["warp.split_up_surfaces_fsLR_32k_lh"].get_output("out1")
+    rh_pial_fslr = wf_nodes["warp.split_up_surfaces_fsLR_32k_rh"].get_output("out1")
+    lh_pial_out = os.path.join(surf_dir, f"{subject}.L.pial.32k_fs_LR.surf.gii")
+    rh_pial_out = os.path.join(surf_dir, f"{subject}.R.pial.32k_fs_LR.surf.gii")
+    os.rename(lh_pial_fslr, lh_pial_out)
+    os.rename(rh_pial_fslr, rh_pial_out)
 
 
 if __name__ == "__main__":
