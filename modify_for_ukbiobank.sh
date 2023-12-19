@@ -1,3 +1,4 @@
+#!/bin/bash
 docker run --rm -ti \
     -v /Users/taylor/Documents/linc/xcp_d_test_data:/src \
     -v /Users/taylor/Documents/tsalo/xcp_d_testing/data/license.txt:/license.txt \

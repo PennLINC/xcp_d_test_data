@@ -34,8 +34,10 @@ def main(fmri_dir, out_dir, work_dir):
     out_sub_dir = os.path.join(out_dir, f"00000{subject}_0{session}_2_0")
 
     in_anat_dir = os.path.join(fmri_dir, subject_id, session_id, "anat")
-    out_anat_dir = os.path.join(out_sub_dir, "T1w")
+    out_anat_dir = os.path.join(out_sub_dir, "T1")
     os.makedirs(out_anat_dir, exist_ok=True)
+
+    # MNI152NLin6Asym-space T1w, for XCP-D
     in_anat_file = os.path.join(
         in_anat_dir,
         f"{subject_id}_{session_id}_space-MNI152NLin6Asym_desc-preproc_T1w.nii.gz",
@@ -43,6 +45,16 @@ def main(fmri_dir, out_dir, work_dir):
     anat_img = nb.load(in_anat_file)
     anat_img_las = anat_img.as_reoriented(las_orientation)
     out_anat_file = os.path.join(out_anat_dir, "T1_brain_to_MNI.nii.gz")
+    anat_img_las.to_filename(out_anat_file)
+
+    # T1w-space T1w, to create the transforms
+    in_anat_file = os.path.join(
+        in_anat_dir,
+        f"{subject_id}_{session_id}_desc-preproc_T1w.nii.gz",
+    )
+    anat_img = nb.load(in_anat_file)
+    anat_img_las = anat_img.as_reoriented(las_orientation)
+    out_anat_file = os.path.join(out_anat_dir, "T1.nii.gz")
     anat_img_las.to_filename(out_anat_file)
 
     in_func_dir = os.path.join(fmri_dir, subject_id, session_id, "func")
