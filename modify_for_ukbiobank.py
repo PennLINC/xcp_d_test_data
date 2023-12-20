@@ -1,6 +1,6 @@
 """Prepare fMRIPrep data for UK Biobank conversion.
 
--   Copy native-space boldref to fMRI/rfMRI_SBREF
+-   Copy native-space boldref to fMRI/rfMRI.ica/example_func.nii.gz
 -   Copy native-space BOLD data to
     fMRI/rfMRI.ica/filtered_func_data_clean.nii.gz
 -   Convert motion parameters to FSL format and put in
@@ -60,22 +60,26 @@ def main(fmri_dir, out_dir, work_dir):
     in_func_dir = os.path.join(fmri_dir, subject_id, session_id, "func")
     out_func_dir = os.path.join(out_sub_dir, "fMRI")
     os.makedirs(out_func_dir, exist_ok=True)
+    out_ica_dir = os.path.join(out_func_dir, "rfMRI.ica")
+    os.makedirs(out_ica_dir, exist_ok=True)
+    out_reg_dir = os.path.join(out_ica_dir, "reg")
+    os.makedirs(out_reg_dir, exist_ok=True)
+
+    # Reorient BOLD files to LAS+ and place them in the working directory
     in_sbref = os.path.join(
         in_func_dir,
         f"{subject_id}_{session_id}_task-rest_acq-singleband_space-T1w_boldref.nii.gz",
     )
     sbref_img = nb.load(in_sbref)
     sbref_img_las = sbref_img.as_reoriented(las_orientation)
-    out_sbref = os.path.join(out_func_dir, "rfMRI_SBREF.nii.gz")
+    out_sbref = os.path.join(work_dir, "example_func.nii.gz")
     sbref_img_las.to_filename(out_sbref)
 
-    out_ica_dir = os.path.join(out_func_dir, "rfMRI.ica")
-    os.makedirs(out_ica_dir, exist_ok=True)
     in_func_file = os.path.join(
         in_func_dir,
         f"{subject_id}_{session_id}_task-rest_acq-singleband_space-T1w_desc-preproc_bold.nii.gz",
     )
-    out_func_file = os.path.join(out_ica_dir, "filtered_func_data_clean.nii.gz")
+    out_func_file = os.path.join(work_dir, "filtered_func_data_clean.nii.gz")
     func_img = nb.load(in_func_file)
     func_img_las = func_img.as_reoriented(las_orientation)
     func_img_las.to_filename(out_func_file)
@@ -84,7 +88,7 @@ def main(fmri_dir, out_dir, work_dir):
         in_func_dir,
         f"{subject_id}_{session_id}_task-rest_acq-singleband_space-T1w_desc-brain_mask.nii.gz",
     )
-    out_mask_file = os.path.join(out_ica_dir, "mask.nii.gz")
+    out_mask_file = os.path.join(work_dir, "mask.nii.gz")
     mask_img = nb.load(in_mask_file)
     mask_img_las = mask_img.as_reoriented(las_orientation)
     mask_img_las.to_filename(out_mask_file)
