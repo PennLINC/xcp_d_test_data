@@ -1,12 +1,12 @@
 """Prepare fMRIPrep data for UK Biobank conversion.
 
--   Copy native-space boldref to fMRI/rfMRI.ica/example_func.nii.gz
--   Copy native-space BOLD data to
+-   Copy T1w-space boldref to fMRI/rfMRI.ica/example_func.nii.gz
+-   Copy T1w-space BOLD data to
     fMRI/rfMRI.ica/filtered_func_data_clean.nii.gz
 -   Convert motion parameters to FSL format and put in
     fMRI/rfMRI.ica/mc/prefiltered_func_data_mcf.par
 -   Copy rmsd values to fMRI/rfMRI.ica/mc/prefiltered_func_data_mcf_abs.rms
--   FNIRT boldref-space BOLD data to MNI152NLin6Asym (resolution?) and output
+-   FNIRT T1w-space BOLD data to MNI152NLin6Asym (resolution?) and output
     warp field to fMRI/rfMRI.ica/reg/example_func2standard_warp.nii.gz
 """
 import json
@@ -72,14 +72,14 @@ def main(fmri_dir, out_dir, work_dir):
     )
     sbref_img = nb.load(in_sbref)
     sbref_img_las = sbref_img.as_reoriented(las_orientation)
-    out_sbref = os.path.join(work_dir, "example_func.nii.gz")
+    out_sbref = os.path.join(out_ica_dir, "example_func.nii.gz")
     sbref_img_las.to_filename(out_sbref)
 
     in_func_file = os.path.join(
         in_func_dir,
         f"{subject_id}_{session_id}_task-rest_acq-singleband_space-T1w_desc-preproc_bold.nii.gz",
     )
-    out_func_file = os.path.join(work_dir, "filtered_func_data_clean.nii.gz")
+    out_func_file = os.path.join(out_ica_dir, "filtered_func_data_clean.nii.gz")
     func_img = nb.load(in_func_file)
     func_img_las = func_img.as_reoriented(las_orientation)
     func_img_las.to_filename(out_func_file)
@@ -88,7 +88,7 @@ def main(fmri_dir, out_dir, work_dir):
         in_func_dir,
         f"{subject_id}_{session_id}_task-rest_acq-singleband_space-T1w_desc-brain_mask.nii.gz",
     )
-    out_mask_file = os.path.join(work_dir, "mask.nii.gz")
+    out_mask_file = os.path.join(out_ica_dir, "mask.nii.gz")
     mask_img = nb.load(in_mask_file)
     mask_img_las = mask_img.as_reoriented(las_orientation)
     mask_img_las.to_filename(out_mask_file)
